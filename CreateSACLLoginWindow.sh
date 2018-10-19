@@ -36,7 +36,7 @@ if [[ "$(/usr/bin/id -u)" != "0" ]] ; then
 fi
 
 # Computer must be able to talk to AD
-checkAD=$(/usr/bin/dscl localhost -list . | grep "Active Directory")
+check4AD=$(/usr/bin/dscl localhost -list . | grep "Active Directory")
 
 #test if the SACL Files exist
 netaccountExist=`dscl . -read /Groups/com.apple.loginwindow.netaccounts > /dev/null; echo $?`
