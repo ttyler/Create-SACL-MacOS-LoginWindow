@@ -23,6 +23,12 @@
 # Script to lock the loginwindow to one AD User
 # Any previous user will be removed. local Admins can still login.
 
+# Use:
+# Add this script to a Self Service Policy to allow Users to lock their
+# Computer to their AD name.
+
+# Requirements: Mac is Bound to AD
+
 # Current User WILL be challenged to enter an AD UserName
 # Hard Coded Value here
 secureUser=""
@@ -45,7 +51,7 @@ access_loginwindow=`dscl . -read /Groups//Groups/com.apple.access_loginwindow > 
 # Start the Process.
 
 while [ -z $secureUser ];do
-        secureUser="$(osascript -e 'Tell application "System Events" to display dialog "Please enter the AD Username to assign this computer to:" default answer "" with title "End user AD name" with text buttons {"Cancel","Ok"} default button 2' -e 'text returned of result')"
+        secureUser="$(osascript -e 'Tell application "System Events" to display dialog "Please enter the AD Username to assign this computer to:" default answer "" with title "End user AD name" with text buttons {"Ok"} default button 2' -e 'text returned of result')"
         if [[ $? -ne 0 ]]; then 
                 exit 0
         fi
@@ -55,7 +61,7 @@ while [ -z $secureUser ];do
         echo "NOTICE: argument contains an illegal character" >&2
         secureUser=""
                 buttonReturned="$(osascript -e 'Tell application "System Events" to display dialog "Please ensure no Spaces or illegal characters are entered." with title "Error with ID Entered" with text buttons {"Cancel","Try Again"} default button 2' -e 'button returned of result')"
-                if [[ $? -ne 0 ]]; then 
+                if [[ ${buttonReturned} == "Cancel" ]]; then 
                         exit 0
                 fi
         fi
