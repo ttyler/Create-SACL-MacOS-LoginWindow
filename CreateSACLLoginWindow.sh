@@ -51,7 +51,7 @@ access_loginwindow=`dscl . -read /Groups//Groups/com.apple.access_loginwindow > 
 # Start the Process.
 
 while [ -z $secureUser ];do
-        secureUser="$(osascript -e 'Tell application "System Events" to display dialog "Please enter the AD Username to assign this computer to:" default answer "" with title "End user AD name" with text buttons {"Ok"} default button 2' -e 'text returned of result')"
+        secureUser="$(osascript -e 'Tell application "System Events" to display dialog "Please enter the AD Username to assign this computer to:" default answer "" with title "End user AD name" with text buttons {"Ok"} default button 1' -e 'text returned of result')"
         if [[ $? -ne 0 ]]; then 
                 exit 0
         fi
