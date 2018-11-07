@@ -6,7 +6,7 @@ When a Mac is bound to Active Directory you have an option with the MacOS System
 
 This does not prevent local administrators access to the Computer, only Active Directory users.
 
-Written in 10.13 and tested sucessfully on 10.13.1 through 10.13.6 and also on 10.14. 
+Written in 10.13 and tested sucessfully on 10.13.1 through 10.13.6 and also tested on 10.14. 
 
 I leveraged the support of the internet and beased this script on the response of tron_jones on the following link.
 
