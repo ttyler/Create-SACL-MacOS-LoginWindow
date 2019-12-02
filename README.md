@@ -8,10 +8,10 @@ This does not prevent local administrators access to the Computer, only Active D
 
 Written in 10.13 and tested sucessfully on 10.13.1 through 10.13.6 and also tested on 10.14. 
 
-I leveraged the support of the internet and beased this script on the response of tron_jones on the following link.
+I leveraged the support of the internet and based this script on the response of tron_jones on the following link.
 
 https://apple.stackexchange.com/questions/162260/allow-only-specific-ad-users-groups-to-login
 
-Essentially the lgin window like any other service can be linited by Access Control lists. Since it is a Service it is an SACL, thus the name. We are creating a Service Access COntrol List for a specific User.
+Essentially the lgin window like any other service can be limited by Access Control lists. Since it is a Service it is an SACL, thus the name. We are creating a Service Access Control List for a specific User.
 
 The associated here is designed to run with "Jamf" Self Service policy, meaning that a user could choose to "Secure their Mac through Self Service and thus enter their AD credental which would be applied to the Login window.
