@@ -1,7 +1,8 @@
 #!/bin/bash
 
+# Originally Written by Tomos Tyler 2017 D8 Services
 ###############################################################
-#	Copyright (c) 2017, D8 Services Ltd.  All rights reserved.  
+#	Copyright (c) 2018, D8 Services Ltd.  All rights reserved.  
 #											
 #	
 #	THIS SOFTWARE IS PROVIDED BY D8 SERVICES LTD. "AS IS" AND ANY
@@ -18,21 +19,23 @@
 #
 ###############################################################
 #
-# Originally Written by Tomos Tyler 2017 D8 Services
+# 1.0 Initial Creation Tomos Tyler 2017
+# 2.0 Update for offering local account
+# 2.2 Update 2019 removed tell function for display dialog
 
 # Script to lock the loginwindow to one AD User
 # Any previous user will be removed. local Admins can still login.
 
-# Use:
-# Add this script to a Self Service Policy to allow Users to lock their
-# Computer to their AD name.
-
-# Requirements: Mac is Bound to AD
-
 # Current User WILL be challenged to enter an AD UserName
 # Hard Coded Value here
 secureUser=""
+
+# If you would like to ad an AD group to the SACL add it here and uncomment line 122
+secureGroup=""
 # Designed to run as a self service policy for users to secure devices.
+
+loggedInUser=$(/usr/bin/python -c 'from SystemConfiguration import SCDynamicStoreCopyConsoleUser; import sys; username = (SCDynamicStoreCopyConsoleUser(None, None, None) or [None])[0]; username = [username,""][username in [u"loginwindow", None, u""]]; sys.stdout.write(username + "\n");')
+
 
 # Must be run as Root
 if [[ "$(/usr/bin/id -u)" != "0" ]] ; then
@@ -41,17 +44,30 @@ if [[ "$(/usr/bin/id -u)" != "0" ]] ; then
         #exit 0
 fi
 
+userSummary() {
+theResult=$(launchctl "asuser" "USER_ID" /usr/bin/osascript <<EOF
+set theimage to POSIX file "/tmp/SCBIcon.png" as alias
+display dialog "${1}" buttons {"No","Yes"} default button 2 with title "${2}" with icon theimage
+return button returned of result
+EOF)
+}
+
 # Computer must be able to talk to AD
 check4AD=$(/usr/bin/dscl localhost -list . | grep "Active Directory")
 
 #test if the SACL Files exist
 netaccountExist=`dscl . -read /Groups/com.apple.loginwindow.netaccounts > /dev/null; echo $?`
-access_loginwindow=`dscl . -read /Groups//Groups/com.apple.access_loginwindow > /dev/null; echo $?`
+access_loginwindow=`dscl . -read /Groups/com.apple.access_loginwindow > /dev/null; echo $?`
 
 # Start the Process.
 
-while [ -z $secureUser ];do
-        secureUser="$(osascript -e 'Tell application "System Events" to display dialog "Please enter the AD Username to assign this computer to:" default answer "" with title "End user AD name" with text buttons {"Ok"} default button 1' -e 'text returned of result')"
+userSummary "Would you like to use '${loggedInUser}' as the name to secure this Mac with?" "Enduser AD name"
+if [[ ${theResult} == "Yes" ]];then
+        secureUser=${loggedInUser}
+fi
+
+while [[ -z $secureUser ]];do
+        secureUser="$(launchctl "asuser" "USER_ID" osascript -e 'display dialog "Please enter the AD Username to assign this computer to:" default answer "" with title "Enduser AD name" with text buttons {"Ok"} default button 1' -e 'text returned of result')"
         if [[ $? -ne 0 ]]; then 
                 exit 0
         fi
@@ -60,8 +76,9 @@ while [ -z $secureUser ];do
                 #        if [[ "$secureUser" =~ [^a-zA-Z0-9.-] ]]; then
         echo "NOTICE: argument contains an illegal character" >&2
         secureUser=""
-                buttonReturned="$(osascript -e 'Tell application "System Events" to display dialog "Please ensure no Spaces or illegal characters are entered." with title "Error with ID Entered" with text buttons {"Cancel","Try Again"} default button 2' -e 'button returned of result')"
-                if [[ ${buttonReturned} == "Cancel" ]]; then 
+                buttonReturned="$(launchctl "asuser" "USER_ID" osascript -e 'display dialog "Please ensure no Spaces or illegal characters are entered." with title "Error with ID Entered" with text buttons {"Cancel","Try Again"} default button 2' -e 'button returned of result')"
+                
+                if [[ $buttonReturned == "Cancel" ]]; then 
                         exit 0
                 fi
         fi
@@ -69,14 +86,14 @@ done
 
 # If the machine is not bound to AD, then there's no purpose going any further.
 if [[ "${check4AD}" != "Active Directory" ]]; then
-        osascript -e 'Tell application "System Events" to display dialog  "This machine is not bound to Active Directory. Please bind to AD first." with title "Device not Bound To AD" with text buttons {"Cancel"} default button 1'
+        launchctl "asuser" "USER_ID" osascript -e 'Tell application "System Events" to display dialog  "This machine is not bound to Active Directory. Please bind to AD first." with title "Device not Bound To AD" with text buttons {"Cancel"} default button 1'
         exit 1
 fi
 
 # Lookup a domain account and check exit code for error
 /usr/bin/id -u "${secureUser}"
 if [[ $? -ne 0 ]]; then
-        osascript -e 'Tell application "System Events" to display dialog  "It doesn not look like this Mac is communicating with AD correctly. Exiting the script." with title "Error with AD Communication" with text buttons {"Cancel"} default button 1'
+        launchctl "asuser" "USER_ID" osascript -e 'Tell application "System Events" to display dialog  "It doesn not look like this Mac is communicating with AD correctly. Exiting the script." with title "Error with AD Communication" with text buttons {"Cancel"} default button 1'
         exit 1
 fi
 
@@ -105,9 +122,10 @@ dscl . -create /Groups/com.apple.access_loginwindow Password \*
 dscl . -create /Groups/com.apple.access_loginwindow RealName "Login Window ACL"
 
 dseditgroup -o edit -n /Local/Default -a $secureUser -t user com.apple.loginwindow.netaccounts
-#dseditgroup -o edit -n /Local/Default -a groupName -t group com.apple.loginwindow.netaccounts
+#dseditgroup -o edit -n /Local/Default -a "${secureGroup}" -t group com.apple.loginwindow.netaccounts
 
 dseditgroup -o edit -n /Local/Default -a com.apple.loginwindow.netaccounts -t group com.apple.access_loginwindow
 dseditgroup -o edit -n /Local/Default -a localaccounts -t group com.apple.access_loginwindow
 
 jamf recon -endUsername $secureUser
+
